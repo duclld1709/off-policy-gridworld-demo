@@ -64,8 +64,13 @@ export function ControlPanel({
         <Button icon={<RotateCcw size={17} />} onClick={onReset}>
           Reset
         </Button>
-        <Button icon={<StepForward size={17} />} onClick={onTrainStep} variant="primary">
-          Train one step
+        <Button
+          icon={soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
+          onClick={onToggleSound}
+          variant={soundEnabled ? "primary" : "secondary"}
+          className="sound-toggle"
+        >
+          {soundEnabled ? "Sound on" : "Sound off"}
         </Button>
         <Button icon={<Activity size={17} />} onClick={onTrainEpisode}>
           Train one episode
@@ -118,30 +123,28 @@ export function ControlPanel({
         <Button icon={isAutoTraining ? <Pause size={17} /> : <Play size={17} />} onClick={onToggleAuto} variant="primary">
           {isAutoTraining ? "Pause" : "Auto train"}
         </Button>
-        <div className="eval-button-pair">
-          <Button
-            icon={<Target size={15} />}
-            onClick={onEvaluateGreedy}
-            variant={isEvaluating && evaluationStrategy === "greedy" ? "primary" : "secondary"}
-          >
-            Greedy
-          </Button>
-          <Button
-            icon={<Shuffle size={15} />}
-            onClick={onEvaluateNonGreedy}
-            variant={isEvaluating && evaluationStrategy === "non_greedy" ? "primary" : "secondary"}
-          >
-            Non-greedy
-          </Button>
-        </div>
-        <Button
-          icon={soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
-          onClick={onToggleSound}
-          variant={soundEnabled ? "primary" : "secondary"}
-          className="sound-toggle"
-        >
-          {soundEnabled ? "Sound on" : "Sound off"}
+        <Button icon={<StepForward size={17} />} onClick={onTrainStep} variant="primary">
+          Train one step
         </Button>
+        <div className="evaluate-group">
+          <div className="evaluate-label">Evaluate</div>
+          <div className="eval-button-pair">
+            <Button
+              icon={<Target size={15} />}
+              onClick={onEvaluateGreedy}
+              variant={isEvaluating && evaluationStrategy === "greedy" ? "primary" : "secondary"}
+            >
+              Greedy
+            </Button>
+            <Button
+              icon={<Shuffle size={15} />}
+              onClick={onEvaluateNonGreedy}
+              variant={isEvaluating && evaluationStrategy === "non_greedy" ? "primary" : "secondary"}
+            >
+              Non-greedy
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="slider-stack">
