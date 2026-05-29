@@ -1,10 +1,10 @@
-import { ACTIONS, GRID_SIZE } from "../constants/grid";
+import { ACTIONS, DEFAULT_GRID_SIZE } from "../constants/grid";
 import type { Hyperparams, PolicyTable, QTable, Transition, UpdateInfo } from "../types/rl";
 import { actionIndex, getActionProb } from "./policies";
 
-export function createQTable(): QTable {
-  return Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => ACTIONS.map(() => 0)),
+export function createQTable(gridSize = DEFAULT_GRID_SIZE): QTable {
+  return Array.from({ length: gridSize }, () =>
+    Array.from({ length: gridSize }, () => ACTIONS.map(() => 0)),
   );
 }
 

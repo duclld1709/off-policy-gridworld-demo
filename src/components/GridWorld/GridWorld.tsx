@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type CSSProperties } from "react";
 import type { DoneReason, GridLayout, State } from "../../types/rl";
 import { sameState } from "../../rl/utils";
 import { useAnimation } from "../../hooks/useAnimation";
@@ -29,10 +29,15 @@ export function GridWorld({
 }: GridWorldProps) {
   const animation = useAnimation(speedMs);
   const draggedTrapRef = useRef<State | null>(null);
+  const gridSize = grid.length;
+  const boardStyle = {
+    "--grid-size": gridSize,
+    "--grid-gap-total": `calc(${Math.max(0, gridSize - 1)} * var(--grid-gap))`,
+  } as CSSProperties;
 
   return (
     <div className={`grid-stage done-${doneReason} ${canEditTraps ? "grid-editable" : ""}`}>
-      <div className="grid-board">
+      <div className="grid-board" style={boardStyle}>
         {grid.map((row, rowIndex) =>
           row.map((cell, colIndex) => (
             <GridCell

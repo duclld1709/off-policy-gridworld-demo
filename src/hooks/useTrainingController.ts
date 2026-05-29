@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DEFAULT_ANIMATION_SPEED_MS, DEFAULT_HYPERPARAMS } from "../constants/hyperparams";
-import { cloneGrid } from "../constants/grid";
+import { cloneGrid, createGrid, DEFAULT_GRID_SIZE } from "../constants/grid";
 import type { EpisodeSummary, EvaluationStrategy, GridLayout, Hyperparams, Mode, State, Transition, UpdateInfo } from "../types/rl";
 import {
   advanceTrainingStep,
@@ -35,9 +35,9 @@ interface ControllerState {
   isEvaluating: boolean;
 }
 
-function createInitialState(): ControllerState {
+function createInitialState(hyperparams: Hyperparams = DEFAULT_HYPERPARAMS, gridSize = DEFAULT_GRID_SIZE): ControllerState {
   return {
-    learner: createLearner(DEFAULT_HYPERPARAMS),
+    learner: createLearner(hyperparams, gridSize),
     runtime: createEpisodeRuntime(),
     evaluationRuntime: createEvaluationRuntime(),
     evaluationStrategy: "greedy",
@@ -52,8 +52,9 @@ function createInitialState(): ControllerState {
 export function useTrainingController() {
   const [hyperparams, setHyperparams] = useState<Hyperparams>(DEFAULT_HYPERPARAMS);
   const [speedMs, setSpeedMs] = useState(DEFAULT_ANIMATION_SPEED_MS);
-  const [grid, setGrid] = useState<GridLayout>(() => cloneGrid());
-  const [controller, setController] = useState<ControllerState>(() => createInitialState());
+  const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
+  const [grid, setGrid] = useState<GridLayout>(() => createGrid(DEFAULT_GRID_SIZE));
+  const [controller, setController] = useState<ControllerState>(() => createInitialState(DEFAULT_HYPERPARAMS, DEFAULT_GRID_SIZE));
   const metrics = useMetrics(controller.summaries);
   const canEditTraps =
     controller.mode === "Training" &&
@@ -63,11 +64,20 @@ export function useTrainingController() {
     controller.summaries.length === 0;
 
   const reset = useCallback(() => {
-    setController(createInitialState());
+    setController(createInitialState(DEFAULT_HYPERPARAMS, gridSize));
     setHyperparams(DEFAULT_HYPERPARAMS);
     setSpeedMs(DEFAULT_ANIMATION_SPEED_MS);
-    setGrid(cloneGrid());
-  }, []);
+    setGrid(createGrid(gridSize));
+  }, [gridSize]);
+
+  const updateGridSize = useCallback(
+    (nextGridSize: number) => {
+      setGridSize(nextGridSize);
+      setGrid(createGrid(nextGridSize));
+      setController(createInitialState(hyperparams, nextGridSize));
+    },
+    [hyperparams],
+  );
 
   const moveTrap = useCallback(
     (from: State, to: State) => {
@@ -245,12 +255,14 @@ export function useTrainingController() {
   return {
     controller,
     grid,
+    gridSize,
     canEditTraps,
     hyperparams,
     speedMs,
     metrics,
     displayState,
     reset,
+    updateGridSize,
     updateHyperparam,
     setSpeedMs,
     moveTrap,

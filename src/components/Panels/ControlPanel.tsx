@@ -1,5 +1,7 @@
+import { useState } from "react";
 import {
   Activity,
+  ChevronDown,
   FastForward,
   Pause,
   Play,
@@ -15,6 +17,8 @@ import { Button } from "../common/Button";
 import { Card } from "../common/Card";
 import { Slider } from "../common/Slider";
 
+const TRAIN_BATCH_OPTIONS = [100, 1000, 10000];
+
 interface ControlPanelProps {
   hyperparams: Hyperparams;
   speedMs: number;
@@ -25,7 +29,7 @@ interface ControlPanelProps {
   onReset: () => void;
   onTrainStep: () => void;
   onTrainEpisode: () => void;
-  onTrainBatch: () => void;
+  onTrainBatch: (episodeCount: number) => void;
   onToggleAuto: () => void;
   onEvaluateGreedy: () => void;
   onEvaluateNonGreedy: () => void;
@@ -52,6 +56,8 @@ export function ControlPanel({
   onHyperparamChange,
   onSpeedChange,
 }: ControlPanelProps) {
+  const [isBatchMenuOpen, setIsBatchMenuOpen] = useState(false);
+
   return (
     <Card title="Training Control" eyebrow="Simulator">
       <div className="control-grid">
@@ -64,9 +70,51 @@ export function ControlPanel({
         <Button icon={<Activity size={17} />} onClick={onTrainEpisode}>
           Train one episode
         </Button>
-        <Button icon={<FastForward size={17} />} onClick={onTrainBatch}>
-          Train 50 episodes
-        </Button>
+        <div
+          className="batch-select-shell"
+          onBlur={(event) => {
+            const nextTarget = event.relatedTarget as Node | null;
+            if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+              setIsBatchMenuOpen(false);
+            }
+          }}
+        >
+          <button
+            type="button"
+            className="button batch-select-button"
+            aria-haspopup="listbox"
+            aria-expanded={isBatchMenuOpen}
+            onClick={() => setIsBatchMenuOpen((current) => !current)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setIsBatchMenuOpen(false);
+              if (event.key === "ArrowDown") setIsBatchMenuOpen(true);
+            }}
+          >
+            <FastForward size={17} />
+            <span>Train batch</span>
+            <ChevronDown size={15} />
+          </button>
+          {isBatchMenuOpen && (
+            <div className="batch-select-menu" role="listbox" aria-label="Training batch size">
+              {TRAIN_BATCH_OPTIONS.map((episodeCount) => (
+                <button
+                  key={episodeCount}
+                  type="button"
+                  className="batch-select-option"
+                  role="option"
+                  aria-selected="false"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setIsBatchMenuOpen(false);
+                    onTrainBatch(episodeCount);
+                  }}
+                >
+                  Train {episodeCount}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Button icon={isAutoTraining ? <Pause size={17} /> : <Play size={17} />} onClick={onToggleAuto} variant="primary">
           {isAutoTraining ? "Pause" : "Auto train"}
         </Button>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BrainCircuit, Database, FastForward, Sparkles, X } from "lucide-react";
+import { BrainCircuit, ChevronDown, Database, FastForward, Sparkles } from "lucide-react";
+import { GRID_SIZE_OPTIONS } from "./constants/grid";
 import { GridWorld } from "./components/GridWorld/GridWorld";
-import { Button } from "./components/common/Button";
 import { ControlPanel } from "./components/Panels/ControlPanel";
 import { StatusPanel } from "./components/Panels/StatusPanel";
 import { PolicyPanel } from "./components/Panels/PolicyPanel";
@@ -13,21 +13,23 @@ import { useGameAudio } from "./hooks/useGameAudio";
 import { useTrainingController } from "./hooks/useTrainingController";
 import type { EvaluationStrategy, Transition } from "./types/rl";
 
-const RAPID_BATCH_CLICK_LIMIT = 3;
-const RAPID_BATCH_CLICK_WINDOW_MS = 2000;
+const BULK_TRAIN_CHUNK_SIZE = 50;
 
 function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [showBulkTrainPrompt, setShowBulkTrainPrompt] = useState(false);
+  const [isGridSizeMenuOpen, setIsGridSizeMenuOpen] = useState(false);
+  const [bulkTrainingProgress, setBulkTrainingProgress] = useState<{ completed: number; total: number } | null>(null);
   const {
     controller,
     grid,
+    gridSize,
     canEditTraps,
     hyperparams,
     speedMs,
     metrics,
     displayState,
     reset,
+    updateGridSize,
     updateHyperparam,
     setSpeedMs,
     moveTrap,
@@ -40,7 +42,6 @@ function App() {
   const { playSound, unlockAudio } = useGameAudio(soundEnabled);
   const previousTrainingTransitionRef = useRef<Transition | undefined>(undefined);
   const previousEvaluationKeyRef = useRef<string | undefined>(undefined);
-  const rapidBatchClickRef = useRef({ count: 0, lastClickAt: 0 });
 
   const playTransitionSound = useCallback(
     (transition: Transition) => {
@@ -65,9 +66,14 @@ function App() {
     const transition = controller.lastTransition;
     if (!transition || previousTrainingTransitionRef.current === transition) return;
 
+    if (bulkTrainingProgress !== null) {
+      previousTrainingTransitionRef.current = transition;
+      return;
+    }
+
     previousTrainingTransitionRef.current = transition;
     playTransitionSound(transition);
-  }, [controller.lastTransition, playTransitionSound]);
+  }, [bulkTrainingProgress, controller.lastTransition, playTransitionSound]);
 
   useEffect(() => {
     if (displayState.mode !== "Evaluation" || displayState.currentStep === 0) return;
@@ -113,6 +119,18 @@ function App() {
     reset();
   }, [playSound, reset]);
 
+  const handleGridSizeSelect = useCallback(
+    (nextGridSize: number) => {
+      setIsGridSizeMenuOpen(false);
+      if (nextGridSize === gridSize) return;
+      previousTrainingTransitionRef.current = undefined;
+      previousEvaluationKeyRef.current = undefined;
+      playSound("reset");
+      updateGridSize(nextGridSize);
+    },
+    [gridSize, playSound, updateGridSize],
+  );
+
   const handleTrainStep = useCallback(() => {
     unlockAudio();
     trainOneStep();
@@ -123,44 +141,24 @@ function App() {
     trainEpisodes(1);
   }, [trainEpisodes, unlockAudio]);
 
-  const handleTrainBatch = useCallback(() => {
+  const handleTrainBatch = useCallback(async (episodeCount: number) => {
     unlockAudio();
-    const now = Date.now();
-    const rapidClickState = rapidBatchClickRef.current;
 
-    rapidClickState.count =
-      now - rapidClickState.lastClickAt <= RAPID_BATCH_CLICK_WINDOW_MS ? rapidClickState.count + 1 : 1;
-    rapidClickState.lastClickAt = now;
-
-    if (rapidClickState.count >= RAPID_BATCH_CLICK_LIMIT) {
-      rapidClickState.count = 0;
-      setShowBulkTrainPrompt(true);
-      playSound("toggle");
+    if (episodeCount < 1000) {
+      trainEpisodes(episodeCount);
       return;
     }
 
-    trainEpisodes(50);
-  }, [playSound, trainEpisodes, unlockAudio]);
-
-  const closeBulkTrainPrompt = useCallback(() => {
-    rapidBatchClickRef.current = { count: 0, lastClickAt: 0 };
-    setShowBulkTrainPrompt(false);
-    playSound("toggle");
-  }, [playSound]);
-
-  const confirmBulkTrain = useCallback(() => {
-    unlockAudio();
-    rapidBatchClickRef.current = { count: 0, lastClickAt: 0 };
-    setShowBulkTrainPrompt(false);
-    playSound("start");
-    trainEpisodes(1000);
-  }, [playSound, trainEpisodes, unlockAudio]);
-
-  const continueBatchTrain = useCallback(() => {
-    unlockAudio();
-    rapidBatchClickRef.current = { count: 0, lastClickAt: 0 };
-    setShowBulkTrainPrompt(false);
-    trainEpisodes(50);
+    setBulkTrainingProgress({ completed: 0, total: episodeCount });
+    for (let trainedEpisodes = 0; trainedEpisodes < episodeCount; trainedEpisodes += BULK_TRAIN_CHUNK_SIZE) {
+      const nextChunkSize = Math.min(BULK_TRAIN_CHUNK_SIZE, episodeCount - trainedEpisodes);
+      trainEpisodes(nextChunkSize);
+      setBulkTrainingProgress({ completed: trainedEpisodes + nextChunkSize, total: episodeCount });
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
+    }
+    setBulkTrainingProgress(null);
   }, [trainEpisodes, unlockAudio]);
 
   const handleToggleAuto = useCallback(() => {
@@ -199,7 +197,54 @@ function App() {
             <BrainCircuit size={18} />
             Off-policy reinforcement learning
           </div>
-          <h1>Gridworld 5x5</h1>
+          <h1 className="hero-title">
+            Gridworld
+            <label className="sr-only" htmlFor="grid-size-select">
+              Grid size
+            </label>
+            <span
+              className="grid-size-select-shell"
+              onBlur={(event) => {
+                const nextTarget = event.relatedTarget as Node | null;
+                if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+                  setIsGridSizeMenuOpen(false);
+                }
+              }}
+            >
+              <button
+                id="grid-size-select"
+                type="button"
+                className="grid-size-select"
+                aria-haspopup="listbox"
+                aria-expanded={isGridSizeMenuOpen}
+                onClick={() => setIsGridSizeMenuOpen((current) => !current)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setIsGridSizeMenuOpen(false);
+                  if (event.key === "ArrowDown") setIsGridSizeMenuOpen(true);
+                }}
+              >
+                <span>{gridSize}x{gridSize}</span>
+                <ChevronDown className="grid-size-select-icon" size={18} aria-hidden="true" />
+              </button>
+              {isGridSizeMenuOpen && (
+                <div className="grid-size-menu" role="listbox" aria-label="Grid size">
+                  {GRID_SIZE_OPTIONS.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      className={`grid-size-option ${size === gridSize ? "grid-size-option-active" : ""}`}
+                      role="option"
+                      aria-selected={size === gridSize}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleGridSizeSelect(size)}
+                    >
+                      {size}x{size}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </span>
+          </h1>
         </div>
         <div className="hero-stats">
           <span>
@@ -293,31 +338,26 @@ function App() {
         <ChartsPanel points={metrics.metricPoints} />
       </section>
 
-      {showBulkTrainPrompt && (
+      {bulkTrainingProgress !== null && (
         <div className="modal-backdrop" role="presentation">
-          <div
-            aria-labelledby="bulk-train-title"
-            aria-modal="true"
-            className="confirm-modal"
-            role="dialog"
-          >
-            <button className="modal-close" type="button" aria-label="Close" onClick={closeBulkTrainPrompt}>
-              <X size={18} />
-            </button>
+          <div aria-labelledby="bulk-training-title" aria-modal="true" className="confirm-modal" role="dialog">
             <div className="modal-icon">
               <FastForward size={22} />
             </div>
-            <h2 id="bulk-train-title">Train 1000 episodes?</h2>
-            <p>
-              You clicked Train 50 episodes several times in a row. Run a larger batch now, or keep this click at 50
-              episodes.
-            </p>
-            <div className="modal-actions">
-              <Button variant="primary" icon={<FastForward size={17} />} onClick={confirmBulkTrain}>
-                Train 1000
-              </Button>
-              <Button onClick={continueBatchTrain}>Train 50</Button>
+            <h2 id="bulk-training-title">Training {bulkTrainingProgress.total} episodes</h2>
+            <div
+              className="bulk-progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round((bulkTrainingProgress.completed / bulkTrainingProgress.total) * 100)}
+            >
+              <div
+                className="bulk-progress-fill"
+                style={{ width: `${(bulkTrainingProgress.completed / bulkTrainingProgress.total) * 100}%` }}
+              />
             </div>
+            <p>{bulkTrainingProgress.completed} / {bulkTrainingProgress.total} episodes</p>
           </div>
         </div>
       )}

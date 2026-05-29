@@ -1,5 +1,5 @@
 import { DEFAULT_HYPERPARAMS } from "../constants/hyperparams";
-import { START_STATE } from "../constants/grid";
+import { DEFAULT_GRID_SIZE, START_STATE } from "../constants/grid";
 import type {
   DoneReason,
   EpisodeSummary,
@@ -44,8 +44,8 @@ export interface TrainingStepResult {
   completedEpisode?: EpisodeSummary;
 }
 
-export function createLearner(hyperparams: Hyperparams = DEFAULT_HYPERPARAMS): LearnerState {
-  const qTable = createQTable();
+export function createLearner(hyperparams: Hyperparams = DEFAULT_HYPERPARAMS, gridSize = DEFAULT_GRID_SIZE): LearnerState {
+  const qTable = createQTable(gridSize);
   const targetPolicy = softmaxPolicyFromQ(qTable, hyperparams.temperature);
   return {
     qTable,

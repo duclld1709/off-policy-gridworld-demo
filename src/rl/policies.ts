@@ -1,13 +1,13 @@
-import { ACTIONS, GRID_SIZE } from "../constants/grid";
+import { ACTIONS, DEFAULT_GRID_SIZE } from "../constants/grid";
 import type { Action, PolicyTable, QTable, State } from "../types/rl";
 
 export function actionIndex(action: Action): number {
   return ACTIONS.indexOf(action);
 }
 
-export function createUniformPolicy(): PolicyTable {
-  return Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => ACTIONS.map(() => 1 / ACTIONS.length)),
+export function createUniformPolicy(gridSize = DEFAULT_GRID_SIZE): PolicyTable {
+  return Array.from({ length: gridSize }, () =>
+    Array.from({ length: gridSize }, () => ACTIONS.map(() => 1 / ACTIONS.length)),
   );
 }
 

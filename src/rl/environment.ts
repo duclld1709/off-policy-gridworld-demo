@@ -22,7 +22,7 @@ export function stepEnvironment(state: State, action: Action, grid: GridLayout =
   const delta = ACTION_DELTAS[action];
   const candidate = { row: state.row + delta.row, col: state.col + delta.col };
 
-  if (!inBounds(candidate)) {
+  if (!inBounds(candidate, grid)) {
     return {
       nextState: { ...state },
       reward: -5,

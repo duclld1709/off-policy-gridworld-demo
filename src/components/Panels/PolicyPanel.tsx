@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { ACTIONS } from "../../constants/grid";
 import type { GridLayout, Mode, PolicyTable, State } from "../../types/rl";
 import { sameState } from "../../rl/utils";
@@ -26,10 +27,12 @@ export function PolicyPanel({ title, policy, currentState, grid, mode, kind }: P
       ? "Behavior policy μ is used to act during training."
       : "Target policy π is learned and used during evaluation.";
 
+  const policyGridStyle = { "--grid-size": grid.length } as CSSProperties;
+
   return (
     <Card title={title} eyebrow={active ? "Active now" : "Policy table"} className={active ? "policy-active" : ""}>
       <div className="policy-caption">{caption}</div>
-      <div className="policy-grid">
+      <div className="policy-grid" style={policyGridStyle}>
         {grid.map((row, rowIndex) =>
           row.map((cell, colIndex) => {
             const state = { row: rowIndex, col: colIndex };
