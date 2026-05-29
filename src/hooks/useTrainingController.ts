@@ -95,6 +95,22 @@ export function useTrainingController() {
     [canEditTraps],
   );
 
+  const moveGoal = useCallback(
+    (from: State, to: State) => {
+      if (!canEditTraps) return;
+      setGrid((currentGrid) => {
+        if (currentGrid[from.row]?.[from.col] !== "G") return currentGrid;
+        if (currentGrid[to.row]?.[to.col] !== ".") return currentGrid;
+
+        const nextGrid = cloneGrid(currentGrid);
+        nextGrid[from.row][from.col] = ".";
+        nextGrid[to.row][to.col] = "G";
+        return nextGrid;
+      });
+    },
+    [canEditTraps],
+  );
+
   const toggleTrap = useCallback(
     (state: State) => {
       if (!canEditTraps) return;
@@ -266,6 +282,7 @@ export function useTrainingController() {
     updateHyperparam,
     setSpeedMs,
     moveTrap,
+    moveGoal,
     toggleTrap,
     trainOneStep,
     trainEpisodes,

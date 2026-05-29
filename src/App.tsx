@@ -33,6 +33,7 @@ function App() {
     updateHyperparam,
     setSpeedMs,
     moveTrap,
+    moveGoal,
     toggleTrap,
     trainOneStep,
     trainEpisodes,
@@ -141,36 +142,42 @@ function App() {
     trainEpisodes(1);
   }, [trainEpisodes, unlockAudio]);
 
-  const handleTrainBatch = useCallback(async (episodeCount: number) => {
-    unlockAudio();
+  const handleTrainBatch = useCallback(
+    async (episodeCount: number) => {
+      unlockAudio();
 
-    if (episodeCount < 1000) {
-      trainEpisodes(episodeCount);
-      return;
-    }
+      if (episodeCount < 1000) {
+        trainEpisodes(episodeCount);
+        return;
+      }
 
-    setBulkTrainingProgress({ completed: 0, total: episodeCount });
-    for (let trainedEpisodes = 0; trainedEpisodes < episodeCount; trainedEpisodes += BULK_TRAIN_CHUNK_SIZE) {
-      const nextChunkSize = Math.min(BULK_TRAIN_CHUNK_SIZE, episodeCount - trainedEpisodes);
-      trainEpisodes(nextChunkSize);
-      setBulkTrainingProgress({ completed: trainedEpisodes + nextChunkSize, total: episodeCount });
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, 0);
-      });
-    }
-    setBulkTrainingProgress(null);
-  }, [trainEpisodes, unlockAudio]);
+      setBulkTrainingProgress({ completed: 0, total: episodeCount });
+      for (let trainedEpisodes = 0; trainedEpisodes < episodeCount; trainedEpisodes += BULK_TRAIN_CHUNK_SIZE) {
+        const nextChunkSize = Math.min(BULK_TRAIN_CHUNK_SIZE, episodeCount - trainedEpisodes);
+        trainEpisodes(nextChunkSize);
+        setBulkTrainingProgress({ completed: trainedEpisodes + nextChunkSize, total: episodeCount });
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 0);
+        });
+      }
+      setBulkTrainingProgress(null);
+    },
+    [trainEpisodes, unlockAudio],
+  );
 
   const handleToggleAuto = useCallback(() => {
     playSound(controller.isAutoTraining ? "toggle" : "start");
     toggleAutoTrain();
   }, [controller.isAutoTraining, playSound, toggleAutoTrain]);
 
-  const handleEvaluate = useCallback((strategy: EvaluationStrategy) => {
-    playSound("start");
-    previousEvaluationKeyRef.current = undefined;
-    evaluateTargetPolicy(strategy);
-  }, [evaluateTargetPolicy, playSound]);
+  const handleEvaluate = useCallback(
+    (strategy: EvaluationStrategy) => {
+      playSound("start");
+      previousEvaluationKeyRef.current = undefined;
+      evaluateTargetPolicy(strategy);
+    },
+    [evaluateTargetPolicy, playSound],
+  );
 
   const handleEvaluateGreedy = useCallback(() => {
     handleEvaluate("greedy");
@@ -266,8 +273,11 @@ function App() {
             doneReason={displayState.doneReason}
             speedMs={speedMs}
             grid={grid}
+            lastAction={controller.lastAction}
+            lastReward={controller.lastReward}
             canEditTraps={canEditTraps}
             onMoveTrap={moveTrap}
+            onMoveGoal={moveGoal}
             onToggleTrap={toggleTrap}
           />
           <WhatHappeningPanel />
@@ -312,7 +322,7 @@ function App() {
 
       <section className="dashboard-grid">
         <PolicyPanel
-          title="Behavior Policy μ"
+          title="Behavior Policy mu"
           kind="behavior"
           policy={controller.learner.behaviorPolicy}
           currentState={displayState.currentState}
@@ -320,7 +330,7 @@ function App() {
           mode={displayState.mode}
         />
         <PolicyPanel
-          title="Target Policy π"
+          title="Target Policy pi"
           kind="target"
           policy={controller.learner.targetPolicy}
           currentState={displayState.currentState}

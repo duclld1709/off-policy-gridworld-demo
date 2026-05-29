@@ -7,12 +7,25 @@ interface GridCellProps {
   isCurrent: boolean;
   canEditTraps: boolean;
   onTrapDragStart: (state: State) => void;
+  onGoalDragStart: (state: State) => void;
   onTrapDrop: (state: State) => void;
+  onGoalDrop: (state: State) => void;
   onToggleTrap: (state: State) => void;
 }
 
-export function GridCell({ cell, state, isCurrent, canEditTraps, onTrapDragStart, onTrapDrop, onToggleTrap }: GridCellProps) {
+export function GridCell({
+  cell,
+  state,
+  isCurrent,
+  canEditTraps,
+  onTrapDragStart,
+  onGoalDragStart,
+  onTrapDrop,
+  onGoalDrop,
+  onToggleTrap,
+}: GridCellProps) {
   const isDraggableTrap = canEditTraps && cell === "X";
+  const isDraggableGoal = canEditTraps && cell === "G";
   const isToggleableTrapCell = canEditTraps && (cell === "." || cell === "X");
   const isDropTarget = canEditTraps && cell === ".";
   const className = [
@@ -21,7 +34,7 @@ export function GridCell({ cell, state, isCurrent, canEditTraps, onTrapDragStart
     cell === "G" && "cell-goal",
     cell === "S" && "cell-start",
     isCurrent && "cell-current",
-    isDraggableTrap && "cell-draggable",
+    (isDraggableTrap || isDraggableGoal) && "cell-draggable",
     isDropTarget && "cell-drop-target",
   ]
     .filter(Boolean)
@@ -30,18 +43,20 @@ export function GridCell({ cell, state, isCurrent, canEditTraps, onTrapDragStart
   return (
     <div
       className={className}
-      draggable={isDraggableTrap}
+      draggable={isDraggableTrap || isDraggableGoal}
       onDragOver={(event) => {
         if (!isDropTarget) return;
         event.preventDefault();
       }}
       onDragStart={() => {
         if (isDraggableTrap) onTrapDragStart(state);
+        if (isDraggableGoal) onGoalDragStart(state);
       }}
       onDrop={(event) => {
         if (!isDropTarget) return;
         event.preventDefault();
         onTrapDrop(state);
+        onGoalDrop(state);
       }}
       onDoubleClick={() => {
         if (isToggleableTrapCell) onToggleTrap(state);
@@ -50,8 +65,10 @@ export function GridCell({ cell, state, isCurrent, canEditTraps, onTrapDragStart
       title={
         isDraggableTrap
           ? "Trap: drag to move it to a safe cell, or double-click to remove it."
+          : isDraggableGoal
+            ? "Goal: drag to move it to a safe cell."
           : isDropTarget
-            ? "Safe cell: double-click to create a trap here, or drop a dragged trap here."
+            ? "Safe cell: double-click to create a trap here, or drop a dragged trap or goal here."
             : undefined
       }
     >

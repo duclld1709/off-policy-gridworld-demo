@@ -12,8 +12,11 @@ interface GridWorldProps {
   doneReason: DoneReason;
   speedMs: number;
   grid: GridLayout;
+  lastAction?: string;
+  lastReward?: number;
   canEditTraps: boolean;
   onMoveTrap: (from: State, to: State) => void;
+  onMoveGoal: (from: State, to: State) => void;
   onToggleTrap: (state: State) => void;
 }
 
@@ -23,17 +26,23 @@ export function GridWorld({
   doneReason,
   speedMs,
   grid,
+  lastAction,
+  lastReward,
   canEditTraps,
   onMoveTrap,
+  onMoveGoal,
   onToggleTrap,
 }: GridWorldProps) {
   const animation = useAnimation(speedMs);
   const draggedTrapRef = useRef<State | null>(null);
+  const draggedGoalRef = useRef<State | null>(null);
   const gridSize = grid.length;
   const boardStyle = {
     "--grid-size": gridSize,
     "--grid-gap-total": `calc(${Math.max(0, gridSize - 1)} * var(--grid-gap))`,
   } as CSSProperties;
+  const feedbackKey = `${trajectory.length}-${currentState.row}-${currentState.col}-${lastAction ?? "none"}-${lastReward ?? "none"}`;
+  const shouldShowStepFeedback = Boolean(lastAction) && lastReward !== undefined && trajectory.length > 1;
 
   return (
     <div className={`grid-stage done-${doneReason} ${canEditTraps ? "grid-editable" : ""}`}>
@@ -48,17 +57,38 @@ export function GridWorld({
               canEditTraps={canEditTraps}
               onTrapDragStart={(state) => {
                 draggedTrapRef.current = state;
+                draggedGoalRef.current = null;
+              }}
+              onGoalDragStart={(state) => {
+                draggedGoalRef.current = state;
+                draggedTrapRef.current = null;
               }}
               onTrapDrop={(state) => {
                 if (!draggedTrapRef.current) return;
                 onMoveTrap(draggedTrapRef.current, state);
                 draggedTrapRef.current = null;
               }}
+              onGoalDrop={(state) => {
+                if (!draggedGoalRef.current) return;
+                onMoveGoal(draggedGoalRef.current, state);
+                draggedGoalRef.current = null;
+              }}
               onToggleTrap={onToggleTrap}
             />
           )),
         )}
         <Trajectory trajectory={trajectory} />
+        {shouldShowStepFeedback && (
+          <div
+            key={`reward-${feedbackKey}`}
+            className={`reward-feedback ${(lastReward ?? 0) >= 0 ? "reward-positive" : "reward-negative"}`}
+            style={{ gridRow: currentState.row + 1, gridColumn: currentState.col + 1 }}
+            aria-hidden="true"
+          >
+            {(lastReward ?? 0) > 0 ? "+" : ""}
+            {lastReward}
+          </div>
+        )}
         <Agent
           position={currentState}
           duration={animation.transitionDuration}
@@ -73,7 +103,7 @@ export function GridWorld({
         <span><i className="legend-goal" /> Goal</span>
       </div>
       {canEditTraps && (
-        <div className="grid-edit-hint">Drag trap cells, or double-click safe/trap cells to add or remove traps.</div>
+        <div className="grid-edit-hint">Drag trap or goal cells, or double-click safe/trap cells to add or remove traps.</div>
       )}
     </div>
   );

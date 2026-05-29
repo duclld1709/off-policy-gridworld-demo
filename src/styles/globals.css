@@ -344,6 +344,32 @@ h2 {
   z-index: 4;
 }
 
+.reward-feedback {
+  align-self: start;
+  justify-self: center;
+  z-index: 12;
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(2, 6, 23, 0.78);
+  font-size: 0.84rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  animation: reward-rise 980ms ease-out both;
+}
+
+.reward-positive {
+  color: #bef264;
+  box-shadow: 0 0 18px rgba(132, 204, 22, 0.22);
+}
+
+.reward-negative {
+  color: #fecdd3;
+  box-shadow: 0 0 18px rgba(244, 63, 94, 0.2);
+}
+
 .agent {
   position: absolute;
   left: 0;
@@ -1021,6 +1047,21 @@ input[type="range"] {
   }
   60% {
     transform: translateX(5px);
+  }
+}
+
+@keyframes reward-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.98);
   }
 }
 
