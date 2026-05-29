@@ -199,7 +199,7 @@ function App() {
             <BrainCircuit size={18} />
             Off-policy reinforcement learning
           </div>
-          <h1>Gridworld 5x5: Behavior μ, Target π, Replay Buffer, Importance Sampling</h1>
+          <h1>Gridworld 5x5</h1>
         </div>
         <div className="hero-stats">
           <span>
